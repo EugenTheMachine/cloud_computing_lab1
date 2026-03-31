@@ -1,0 +1,50 @@
+# Docker Compose file for Lab #2
+# by Yevhen Ponomarov, CS-S125
+
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    container_name: db
+    environment:
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todo
+      POSTGRES_DB: todo
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - todo-network
+
+  backend:
+    image: todo-backend
+    container_name: backend
+    depends_on:
+      - db
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todo
+      POSTGRES_DB: todo
+    ports:
+      - "8000:8080"
+    networks:
+      - todo-network
+
+  frontend:
+    image: todo-frontend
+    container_name: frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - todo-network
+
+volumes:
+  db_data:
+
+networks:
+  todo-network:

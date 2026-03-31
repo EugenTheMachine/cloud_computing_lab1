@@ -4,11 +4,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from config import settings
-from database import engine, get_db, Base
+# main.py — replace the old import
+from database import get_db, Base, get_engine   # ← remove 'engine'
+# Do NOT import 'engine' anymore
 from models import Todo
 from schemas import TodoCreate, TodoUpdate, TodoResponse
 
-Base.metadata.create_all(bind=engine)
+import time
+from sqlalchemy.exc import OperationalError
+
+def wait_for_db(engine, retries=100, delay=200):
+    for i in range(retries):
+        try:
+            with engine.connect():
+                print("DB is ready!")
+                return
+        except OperationalError:
+            print(f"DB not ready, retry {i+1}/{retries}...")
+            time.sleep(delay)
+    raise Exception("Database not available")
+
+# Base.metadata.create_all(bind=get_engine())
 
 app = FastAPI(
     title="Todo API",
@@ -74,6 +90,12 @@ def delete_todo(todo_id: int, db: Session = Depends(get_db)):
     db.delete(db_todo)
     db.commit()
     return None
+
+@app.on_event("startup")
+def startup():
+    engine = get_engine()
+    wait_for_db(engine)
+    Base.metadata.create_all(bind=engine)
 
 
 if __name__ == "__main__":
